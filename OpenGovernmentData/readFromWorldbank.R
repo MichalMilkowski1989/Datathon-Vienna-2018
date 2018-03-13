@@ -3,19 +3,12 @@ library(RCurl)
 library(ggplot2)
 library(dplyr)
 
-GlobalEconomicMonitorIndicators <- fromJSON('http://api.worldbank.org/v2/indicators?format=json&per_page=20000')
-GlobalEconomicMonitor <- list()
-for(i in GlobalEconomicMonitorIndicators[[2]]$id){
-  print(paste('I start now with... ',i))
-  GlobalEconomicMonitor[[i]] <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
-}
-
-
 GenderStatsIndicators <- fromJSON('https://api.worldbank.org/v2/sources/14/indicators?format=json') 
 GenderStats <- list()
 for(i in GenderStatsIndicators[[2]]$id){
   print(paste('I start now with... ',i))
   GenderStats[[i]] <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
+  write.csv(jsonlite::flatten(GenderStats[[i]][[2]]),file = paste0('GenderStats_',i,'.csv'))
 }
 
 SustainableDevelopmentGoalsIndicators <- fromJSON('https://api.worldbank.org/v2/sources/46/indicators?format=json') # annual til 2014
@@ -23,18 +16,26 @@ SustainableDevelopmentGoals <- list()
 for(i in SustainableDevelopmentGoalsIndicators[[2]]$id){
   print(paste('I start now with... ',i))
   SustainableDevelopmentGoals[[i]] <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
+  write.csv(jsonlite::flatten(SustainableDevelopmentGoals[[i]][[2]]),file = paste0('SustainableDevelopmentGoals_',i,'.csv'))
 }
-
-SustainableDevelopmentGoals[["GC.TAX.TOTL.CN"]][[2]]$country$id <- as.factor(SustainableDevelopmentGoals[["GC.TAX.TOTL.CN"]][[2]]$country$id )
-ggplot(SustainableDevelopmentGoals[["GC.TAX.TOTL.CN"]][[2]]) + geom_path(aes(x=date,y=value,colour = country$id))  + theme_bw()
-
 
 WealthAccountingIndicators <- fromJSON('https://api.worldbank.org/v2/sources/59/indicators?format=json')   # every 5 years only
 WealthAccounting <- list()
 for(i in WealthAccountingIndicators[[2]]$id){
   print(paste('I start now with... ',i))
   WealthAccounting[[i]] <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
+  write.csv(jsonlite::flatten(WealthAccounting[[i]][[2]]),file = paste0('WealthAccounting_',i,'.csv'))
 }
+
+GlobalEconomicMonitorIndicators <- fromJSON('http://api.worldbank.org/v2/indicators?format=json&per_page=20000')
+GlobalEconomicMonitor <- list()
+
+for(i in GlobalEconomicMonitorIndicators[[2]]$id){
+  print(paste('I start now with... ',i))
+  GlobalEconomicMonitor[[i]] <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
+  write.csv(jsonlite::flatten(GlobalEconomicMonitor[[i]][[2]]),file = paste0('GlobalEconomicMonitor_',i,'.csv'))
+}
+
 
 
 GenderStatsMerged <- bind_rows(lapply(1:length(GenderStats), function(i) jsonlite::flatten(GenderStats[[i]][[2]])))
