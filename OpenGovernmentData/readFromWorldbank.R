@@ -25,8 +25,10 @@ for(j in 1:nrow(indicators)){
   for(i in inds[[2]]$id){
     print(paste('I start now with... ',i, 'from topic', indicators$name[j]))
     zw <- fromJSON(paste0('http://api.worldbank.org/countries/all/indicators/',i,'/?format=json&date=1960:2017&per_page=20000'))  
-    zw <- jsonlite::flatten(zw[[2]])
-    dat[[i]]  <- zw
+    if(length(zw)==2) {
+      zw <- jsonlite::flatten(zw[[2]])
+      dat[[i]]  <- zw
+    }
   }
   Longlist <- bind_rows(dat)
   write.csv(Longlist,file = paste0(indicators$name[j],'_LL.csv'))
