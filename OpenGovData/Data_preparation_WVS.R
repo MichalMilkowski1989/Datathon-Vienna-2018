@@ -113,6 +113,7 @@ long_vars <- c("S002","S003","S009","S025","S017","S019", "X001","X002","X003","
 
 long_data_temp <- WVS_Longitudinal_1981_2014_R_v2015_04_18[,long_vars]
 
+class(long_data_temp)
 
 ########################
 # Data preparation
@@ -273,11 +274,20 @@ long_data_converted <- long_data_temp %>%
          )
 
 
+class(long_data_converted)
+# convert country to character for the purpose of better joining
 
+long_data_converted$Country <- as.character(long_data_converted$Country)
 
-##################
+############################################################
 # Aggregations
-##################
+#
+#
+# LET'S SET A THRESHOLD OF 100 respondents!!!
+#
+#
+#
+###########################################################
 
 ### if you are not familiar with summarisations, THis should be very helpful:
 ##### https://www.r-bloggers.com/aggregation-with-dplyr-summarise-and-summarise_each/
@@ -336,43 +346,45 @@ WVS_aggregates <- long_data_converted %>%
     responded_any_N = sum(ifelse(any_member_desc!='N/A',1,0))
   ) %>% 
   mutate(
-    active_church_pct = active_church_weight/responded_church_weight,
-         members_church_pct = (active_church_weight+inactive_church_weight)/responded_church_weight,
+    active_church_pct = ifelse(responded_church_N>100, active_church_weight/responded_church_weight,NA),
+    members_church_pct = ifelse(responded_church_N>100, (active_church_weight+inactive_church_weight)/responded_church_weight,NA),
     
-    active_sport_pct = active_sport_weight/responded_sport_weight,
-    members_sport_pct = (active_sport_weight+inactive_sport_weight)/responded_sport_weight,
+    active_sport_pct = ifelse(responded_sport_N>100, active_sport_weight/responded_sport_weight,NA),
+    members_sport_pct = ifelse(responded_sport_N>100, (active_sport_weight+inactive_sport_weight)/responded_sport_weight,NA),
     
-    active_artmusicedu_pct = active_artmusicedu_weight/responded_artmusicedu_weight,
-    members_artmusicedu_pct = (active_artmusicedu_weight+inactive_artmusicedu_weight)/responded_artmusicedu_weight,
+    active_artmusicedu_pct = ifelse(responded_artmusicedu_N>100, active_artmusicedu_weight/responded_artmusicedu_weight,NA),
+    members_artmusicedu_pct = ifelse(responded_artmusicedu_N>100, (active_artmusicedu_weight+inactive_artmusicedu_weight)/responded_artmusicedu_weight,NA),
     
-    active_laborunion_pct = active_laborunion_weight/responded_laborunion_weight,
-    members_laborunion_pct = (active_laborunion_weight+inactive_laborunion_weight)/responded_laborunion_weight,
+    active_laborunion_pct = ifelse(responded_laborunion_N>100, active_laborunion_weight/responded_laborunion_weight,NA),
+    members_laborunion_pct = ifelse(responded_laborunion_N>100, (active_laborunion_weight+inactive_laborunion_weight)/responded_laborunion_weight,NA),
     
-    active_political_pct = active_political_weight/responded_political_weight,
-    members_political_pct = (active_political_weight+inactive_political_weight)/responded_political_weight,
+    active_political_pct = ifelse(responded_political_N>100, active_political_weight/responded_political_weight,NA),
+    members_political_pct = ifelse(responded_political_N>100, (active_political_weight+inactive_political_weight)/responded_political_weight,NA),
     
-    active_environmental_pct = active_environmental_weight/responded_environmental_weight,
-    members_environmental_pct = (active_environmental_weight+inactive_environmental_weight)/responded_environmental_weight,
+    active_environmental_pct = ifelse(responded_environmental_N>100, active_environmental_weight/responded_environmental_weight,NA),
+    members_environmental_pct = ifelse(responded_environmental_N>100, (active_environmental_weight+inactive_environmental_weight)/responded_environmental_weight,NA),
     
-    active_professional_pct = active_professional_weight/responded_professional_weight,
-    members_professional_pct = (active_professional_weight+inactive_professional_weight)/responded_professional_weight,
+    active_professional_pct = ifelse(responded_professional_N>100, active_professional_weight/responded_professional_weight,NA),
+    members_professional_pct = ifelse(responded_professional_N>100, (active_professional_weight+inactive_professional_weight)/responded_professional_weight,NA),
     
-    active_charity_pct = active_charity_weight/responded_charity_weight,
-    members_charity_pct = (active_charity_weight+inactive_charity_weight)/responded_charity_weight,
+    active_charity_pct = ifelse(responded_charity_N>100, active_charity_weight/responded_charity_weight,NA),
+    members_charity_pct = ifelse(responded_charity_N>100, (active_charity_weight+inactive_charity_weight)/responded_charity_weight,NA),
     
-    active_other_pct = active_other_weight/responded_other_weight,
-    members_other_pct = (active_other_weight+inactive_other_weight)/responded_other_weight,
+    active_other_pct = ifelse(responded_other_N>100, active_other_weight/responded_other_weight,NA),
+    members_other_pct = ifelse(responded_other_N>100, (active_other_weight+inactive_other_weight)/responded_other_weight,NA),
     
-    active_consumer_pct = active_consumer_weight/responded_consumer_weight,
-    members_consumer_pct = (active_consumer_weight+inactive_consumer_weight)/responded_consumer_weight,
+    active_consumer_pct = ifelse(responded_consumer_N>100, active_consumer_weight/responded_consumer_weight,NA),
+    members_consumer_pct = ifelse(responded_consumer_N>100, (active_consumer_weight+inactive_consumer_weight)/responded_consumer_weight,NA),
     
-    active_help_group_pct = active_help_group_weight/responded_help_group_weight,
-    members_help_group_pct = (active_help_group_weight+inactive_help_group_weight)/responded_help_group_weight,
+    active_help_group_pct = ifelse(responded_help_group_N>100, active_help_group_weight/responded_help_group_weight,NA),
+    members_help_group_pct = ifelse(responded_help_group_N>100, (active_help_group_weight+inactive_help_group_weight)/responded_help_group_weight,NA),
     
-    active_any_pct = active_any_weight/responded_any_weight,
-    members_any_pct = (active_any_weight+inactive_any_weight)/responded_any_weight
-  )
+    active_any_pct = ifelse(responded_any_N>100, active_any_weight/responded_any_weight,NA),
+    members_any_pct = ifelse(responded_any_N>100, (active_any_weight+inactive_any_weight)/responded_any_weight,NA)
+    
+  ) %>% as.data.frame()
 
+class(WVS_aggregates)
   
 ### Save the data
 # respondent level
