@@ -69,7 +69,7 @@ df_countries$country <- as.character(df_countries$country)
 
 # correct one by one
 df_countries$country_corrected <- ifelse(df_countries$country=='Bosnia',"Bosnia and Herzegovina",df_countries$country)
-df_countries$country_corrected <- ifelse(grepl("Ivory",df_countries$country),
+df_countries$country_corrected <- ifelse(grepl("Ivory|Ivoire",df_countries$country),
                                          "Ivory Coast",df_countries$country_corrected)
 
 df_countries$country_corrected <- ifelse(df_countries$country=='Cabo Verde',"Cape Verde",df_countries$country_corrected)
@@ -106,14 +106,6 @@ df_countries$country_corrected <- ifelse(df_countries$country=='Iran, Islamic Re
 df_countries$country_corrected <- ifelse(df_countries$country=='Israel2',"Israel",df_countries$country_corrected)
 
 
-# Korea
-# #Korea, Democratic People's Republic
-# Korea, North
-# North Korea
-# Korea, Republic of
-# Korea, South
-# South Korea
-
 df_countries$country_corrected <- ifelse(df_countries$country %in%
                                            c('Korea, North',
                                              "Korea, Democratic People's Republic"
@@ -129,7 +121,7 @@ df_countries$country_corrected <- ifelse(df_countries$country %in%
 
 df_countries$country_corrected <- ifelse(df_countries$country %in%
                                            c("Lao People's Democratic Republic",
-                                            "Lao People's Democratic Republic"),
+                                            "Lao People's Dem. Republic"),
                                             "Laos",df_countries$country_corrected)
 
 df_countries$country_corrected <- ifelse(df_countries$country=='Libyan Arab Jamahiriya',"Libya",df_countries$country_corrected)
@@ -194,6 +186,11 @@ df_countries$country_corrected <- ifelse(df_countries$country=='Solomon Island',
 
 df_countries$country_corrected <- ifelse(grepl("ncipe",df_countries$country),
                                          "Sao Tome and Principe",df_countries$country_corrected)
+
+
+### Only in World Value Survey, there is Great Britain instead of United Kingdom
+df_countries$country_corrected <- ifelse(df_countries$country=='Great Britain',
+                                         "United Kingdom",df_countries$country_corrected)
 
 
 length(unique(df_countries$country))
@@ -288,6 +285,11 @@ civil_society_temp <- left_join(df_country_year,WVS_aggregates2,
                                 by = c("year"="Wave_end_year_WVS","country"="country_corrected_WVS"))
 dim(civil_society_temp)
 
+civil_society_temp <- left_join(civil_society_temp,CPI2, 
+                                by = c("year"="year_CPI","country"="country_corrected_CPI"))
+dim(civil_society_temp)
+
+
 civil_society_temp <- left_join(civil_society_temp,voter_turnout2_pres, 
                                 by = c("year"="Year","country"="country_corrected"))
 dim(civil_society_temp)
@@ -336,8 +338,11 @@ civil_society_big <- foreach(i=unique(civil_society$country), .combine=rbind) %d
 
 # save data
 
-save(civil_society_big, file = "./group3/civil_society.Rdata")
+### without padding
+save(civil_society, file = "./group3/civil_society_without_padding.Rdata")
 
+### after padding
+save(civil_society_big, file = "./group3/civil_society.Rdata")
 
 
 
