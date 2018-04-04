@@ -422,6 +422,20 @@ for (i in reshaped_sets){
   print(data %>% group_by(country,date) %>% summarise(N= n()) %>% filter(N>1))
 }
 
+########## Let's find out the date range for the countries
+# the point is to limit values for countries with some major historical changes e.g Czechoslovakia, Germany Kosovo
+world_bank_NA_per_country_year <- data.frame(country = world_bank_data_temp$country,
+                                                year = world_bank_data_temp$year,
+                                                missings_row = apply(world_bank_data_temp,1,function(x) sum(is.na(x)))
+)
+
+# if the row is empty it should contain 1372 missing values
+
+world_bank_country_ranges <- world_bank_NA_per_country_year %>% filter(missings_row!=1372) %>% 
+  group_by(country) %>% summarise(min_year = min(year),
+                                  max_year = max(year), 
+                                  num_different_years=n()) %>% 
+  arrange(country)
 
 # 5. Last observation carried forward!!
 library(zoo)
@@ -441,6 +455,12 @@ world_bank_data_big <- foreach(i=unique(world_bank_data$country), .combine=rbind
   cs <- na.locf(world_bank_data[world_bank_data$country == i,])
 }
 
+# na.locf converts data.frame into another object which causes the loss of formats. 
+# One needs to reformat numeric variables
+if_cols <- which(sapply(world_bank_data,is.numeric))
+num_cols<-names(world_bank_data)[if_cols]
+world_bank_data_big <- world_bank_data_big %>% mutate_at(num_cols,as.numeric)
+
 # save data
 
 ### without padding
@@ -450,11 +470,12 @@ save(world_bank_data, file = "./world_bank_data_without_padding.Rdata")
 save(world_bank_data_big, file = "./world_bank_data.Rdata")
 
 
-
 #############################################
 ###         metadata
 #############################################
 variables <- list()
+
+sets <- grep("_LL",sets,value = TRUE)
 
 k <- 0
 for (i in sets){
@@ -501,5 +522,9 @@ setdiff(world_bank_metadata$variable,columns_world_bank)
 length(columns_world_bank) == dim(world_bank_metadata)[1]
 
 # save metadata
-
+### metadata does not contain columns with year!!!
+### those columns shows from which year current source was joined
 save(world_bank_metadata, file = "./world_bank_metadata.Rdata")
+
+### country ranges
+save(world_bank_country_ranges, file = "./world_bank_country_ranges.Rdata")
