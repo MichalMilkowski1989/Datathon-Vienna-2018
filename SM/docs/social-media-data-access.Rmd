@@ -1,0 +1,89 @@
+---
+title: "Social Media Data Access Manual"
+author: "Christoph Waldhauser"
+date: "16/04/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+For the social media challenges, we've harvested the tweets of about 60 NGOs and a number of hashtags. Additionally, 50 of those NGOs also have YouTube channels, where we harvested all channel and video comments.
+
+The results of these efforts have been stored as Hive tables. The following gives an overview of the tables that are available for the social media team:
+
+-----------------------------------------------------------------------------
+Table              Contents
+------------------ ----------------------------------------------------------
+`twitter`          One row for each tweet, 73 variables describing the tweet.
+`youtube_channels` One row for each channel comment in 15 variables.
+`youtube_videos`   One row for each video in 16 variables.
+`youtube_comments` One row for each comment in 16 variables
+`ngos`             One row per targeted NGO
+-----------------------------------------------------------------------------
+
+You can find a more detailed description of the available fields in each table at the [Social Media data dictionary](https://github.com/MichalMilkowski1989/Datathon-Vienna-2018/wiki/Social-Media-Data-Dictionary).
+
+# Data access
+
+All data is stored in tables in the `default` Hive database. From within R, it's easiest to access the data
+using Spark's interface to Hive. Follow these steps to get a data set you can work with:
+
+1. Set up a Spark connection
+2. Write a SQL statement to retrieve the data you need
+3. Use that (subset of the) data directly in Spark
+4. Collect the data (or ideally, just some results) onto the Edge node.
+
+Find some code examples below for each of the steps.
+
+## Setting up a Spark connection
+
+```{r setup-spark-connection}
+library(SparkR)
+library(magrittr)
+
+sp_conf <- list(spark.driver.memory = "2g")
+
+sparkR.session(master = "yarn",
+               appName = paste0("SparkR_", Sys.getenv("USER")),
+               sparkConfig = sp_conf)
+```
+
+## Registering data (sub) sets as Spark DataFrames
+
+```{r register-sdf}
+youtube_channels_sdf <- sql("SELECT * FROM test.youtube_channels")
+twitter_sdf <- sql("SELECT * FROM test.twitter")
+```
+
+## Work with the Spark DataFrame directly in Spark
+
+```{r work-sdf}
+
+twitter_sdf %>% group_by(twitter_sdf$lang) %>% summarize(avg_rt = mean(twitter_sdf$retweet_count)) %>% head()
+
+model_data_sdf <- twitter_sdf %>%
+  select("retweet_count", "quoted_retweet_count") %>%
+  dropna() %>%
+  filter(.$retweet_count > 0) %>%
+  filter(.$quoted_retweet_count > 0)
+
+model <- spark.glm(model_data_sdf, retweet_count ~ quoted_retweet_count, family = "poisson")
+summary(model)
+```
+
+## Collect data/results to the edge node
+
+```{r collection}
+yt_chan_local <- youtube_channels_sdf %>% collect()
+dim(yt_chan_local)
+```
+
+## Close the Spark Session
+
+```{r close-spark}
+sparkR.session.stop()
+```
