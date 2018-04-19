@@ -33,5 +33,3 @@ world_bank_Rdf <- DBI::dbGetQuery(sc, "select * from world_bank_selected")
 
 #it's well-known data frame
 class(civil_society_Rdf)
-
-
