@@ -1,0 +1,234 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+
+# Data loading and preparation
+
+```{r}
+library(sqldf)
+library(ggplot2)
+
+
+world <- read.table("C:/Users/cen85301/Documents/OpenGovData/csv/world_bank_selected.csv", header=TRUE, sep=" ")
+civil <- read.table("C:/Users/cen85301/Documents/OpenGovData/csv/civil_society_selected.csv", header=TRUE, sep=" ")
+
+data_all_countries <- sqldf("select a.COUNTRY,a.YEAR,FP_CPI_TOTL_ZG,NY_GDP_MKTP_KD_ZG,SP_POP_TOTL,SH_DYN_NCOM_ZS,NY_GDP_PCAP_KD,
+              SH_DYN_0514__POPULATIONESTIMATESANDPROJECTIONS,SH_DYN_MORT__POPULATIONESTIMATESANDPROJECTIONS,
+              SP_DYN_LE00_IN__POPULATIONESTIMATESANDPROJECTIONS,SI_DST_FRST_20,
+              EN_ATM_PM25_MC_ZS__SUSTAINABLEDEVELOPMENTGOALS,SHARE_OF_EMPLOYED_IN_TOTAL_POPULATION,
+              SH_UHC_CONS_ZS,NW_HCA_PC,RESPONDED_CHURCH_N_WVS,MEMBERS_ANY_PCT_WVS,CPI_SCORE_CPI,
+              VOTER_TURNOUT_PRESIDENTIAL,VOTER_TURNOUT_PARLIAMENTARY,Q13_2_CIVIL_SOCIETY_TRADITIONS_BTI,
+              SI_DEMOCRACY_STATUS_1_BTI,SII_MARKET_ECONOMY_STATUS_1_BTI,POPULATION_RED_CROSS,
+              V2X_CSPART_VDEM,V2XCS_CCSI_VDEM,V2DLENGAGE_VDEM,V2CSREPRSS_VDEM,V2CSCNSULT_VDEM,V2CSPRTCPT_VDEM,
+              V2CSANTIMV_VDEM,V2MEBIAS_VDEM,V2PEHEALTH_VDEM
+              from world a left join
+              civil b on a.COUNTRY = b.COUNTRY
+              and a.YEAR = b.YEAR
+              where a.YEAR in (2015)")
+
+world <- sqldf("select * 
+               from world 
+               where COUNTRY in ('Albania','Bosnia and Herzegovina','Bulgaria','Czech Republic','Croatia','Hungary',
+               'Kosovo','Macedonia','Montenegro','Montenegro','Moldova',
+               'Poland','Romania','Slovakia','Slovenia','Serbia','Austria')
+               ")
+
+civil <- sqldf("select * 
+               from civil 
+               where COUNTRY in ('Albania','Bosnia and Herzegovina','Bulgaria','Czech Republic','Croatia','Hungary',
+               'Kosovo','Macedonia','Montenegro','Montenegro','Moldova',
+               'Poland','Romania','Slovakia','Slovenia','Serbia','Austria')")
+
+
+# final data join, selecting of relevant variables, year 2015
+data <- sqldf("select a.COUNTRY,a.YEAR,FP_CPI_TOTL_ZG,NY_GDP_MKTP_KD_ZG,SP_POP_TOTL,SH_DYN_NCOM_ZS,NY_GDP_PCAP_KD,
+                      SH_DYN_0514__POPULATIONESTIMATESANDPROJECTIONS,SH_DYN_MORT__POPULATIONESTIMATESANDPROJECTIONS,
+                      SP_DYN_LE00_IN__POPULATIONESTIMATESANDPROJECTIONS,SI_DST_FRST_20,
+                      EN_ATM_PM25_MC_ZS__SUSTAINABLEDEVELOPMENTGOALS,SHARE_OF_EMPLOYED_IN_TOTAL_POPULATION,
+                      SH_UHC_CONS_ZS,NW_HCA_PC,RESPONDED_CHURCH_N_WVS,MEMBERS_ANY_PCT_WVS,CPI_SCORE_CPI,
+                      VOTER_TURNOUT_PRESIDENTIAL,VOTER_TURNOUT_PARLIAMENTARY,Q13_2_CIVIL_SOCIETY_TRADITIONS_BTI,
+                      SI_DEMOCRACY_STATUS_1_BTI,SII_MARKET_ECONOMY_STATUS_1_BTI,POPULATION_RED_CROSS,
+                      V2X_CSPART_VDEM,V2XCS_CCSI_VDEM,V2DLENGAGE_VDEM,V2CSREPRSS_VDEM,V2CSCNSULT_VDEM,V2CSPRTCPT_VDEM,
+                      V2CSANTIMV_VDEM,V2MEBIAS_VDEM,V2PEHEALTH_VDEM
+              from world a left join
+                   civil b on a.COUNTRY = b.COUNTRY
+                            and a.YEAR = b.YEAR
+              where a.YEAR in (2015)")
+```
+
+
+
+# Civil society participation index
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ V2X_CSPART_VDEM, data = data)
+ggplot(data = data, aes(x = V2X_CSPART_VDEM, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Civil society participation index")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data$V2X_CSPART_VDEM) & !is.na(data$V2PEHEALTH_VDEM),], 
+              aes(x = V2X_CSPART_VDEM, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("Civil society participation index")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+
+
+# Turnout during parliamentary election
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ VOTER_TURNOUT_PARLIAMENTARY, data = data)
+ggplot(data = data, aes(x = VOTER_TURNOUT_PARLIAMENTARY, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Turnout during parliamentary election")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data$VOTER_TURNOUT_PARLIAMENTARY) & !is.na(data$V2PEHEALTH_VDEM),], 
+              aes(x = VOTER_TURNOUT_PARLIAMENTARY, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("Turnout during parliamentary election")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+
+# Corruption perception index
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ CPI_SCORE_CPI, data = data)
+ggplot(data = data, aes(x = CPI_SCORE_CPI, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Corruption Perception Index")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data$CPI_SCORE_CPI) & !is.na(data$V2PEHEALTH_VDEM),], 
+              aes(x = CPI_SCORE_CPI, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("Corruption Perception Index")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+
+# GDP per capita (constant 2010 US$)
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ NY_GDP_PCAP_KD, data = data)
+ggplot(data = data, aes(x = NY_GDP_PCAP_KD, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("GDP per capita (constant 2010 US$)")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data_all_countries$NY_GDP_PCAP_KD) & data_all_countries$NY_GDP_PCAP_KD < 100000,], 
+              aes(x = NY_GDP_PCAP_KD, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("GDP per capita (constant 2010 US$)")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+
+# Total population (China and India not included)
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ SP_POP_TOTL, data = data)
+ggplot(data = data, aes(x = SP_POP_TOTL, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Total population")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data_all_countries$SP_POP_TOTL) & data_all_countries$SP_POP_TOTL <= 50000000,], 
+              aes(x = SP_POP_TOTL, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("Total population")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+
+# Democracy status index (1-10)
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ SI_DEMOCRACY_STATUS_1_BTI, data = data)
+ggplot(data = data, aes(x = SI_DEMOCRACY_STATUS_1_BTI, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Democracy status Index (1-10)")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data_all_countries$SI_DEMOCRACY_STATUS_1_BTI),], 
+              aes(x = SI_DEMOCRACY_STATUS_1_BTI, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("Democracy status Index (1-10)")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+```
+
+# CSO anti-system movements
+
+```{r}
+fit <- lm(V2PEHEALTH_VDEM ~ V2CSANTIMV_VDEM, data = data)
+ggplot(data = data, aes(x = V2CSANTIMV_VDEM, y = V2PEHEALTH_VDEM, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("CSO anti-system movements")) + ylab(paste("Health equality")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data_all_countries$V2CSANTIMV_VDEM),], 
+              aes(x = V2CSANTIMV_VDEM, y = V2PEHEALTH_VDEM)) + geom_point() +
+          xlab(paste("CSO anti-system movements")) + ylab(paste("Health equality")) +
+          stat_smooth(method='lm',color = "blue")
+
+```
+
+
+# Media bias and GDP
+
+```{r}
+fit <- lm(NY_GDP_PCAP_KD ~ V2MEBIAS_VDEM, data = data)
+ggplot(data = data, aes(x = V2MEBIAS_VDEM, y = NY_GDP_PCAP_KD, colour = COUNTRY)) + 
+          geom_point() + stat_smooth(method = "lm", col = "red") +
+          xlab(paste("Media bias")) + ylab(paste("GDP per capita (constant 2010 US$)")) +
+          labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                             "Intercept =",signif(fit$coef[[1]],5 ),
+                             " Slope =",signif(fit$coef[[2]], 5),
+                             " P =",signif(summary(fit)$coef[2,4], 5)))
+
+
+ggplot(data_all_countries[!is.na(data_all_countries$V2MEBIAS_VDEM),], 
+              aes(x = V2MEBIAS_VDEM, y = NY_GDP_PCAP_KD)) + geom_point() +
+          xlab(paste("Media bias")) + ylab(paste("GDP per capita (constant 2010 US$)")) +
+          stat_smooth(method='lm',color = "blue")
+
+```
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
