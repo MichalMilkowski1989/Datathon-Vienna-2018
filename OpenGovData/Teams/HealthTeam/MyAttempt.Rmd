@@ -234,3 +234,66 @@ ggplot(variables_joined) + geom_point(aes(PC1*factor,PC2*factor),colour="red") +
 
   
 ```
+```{r}
+ggplot(data_joined_CEE_sel_years)+geom_point(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL))+
+  geom_text(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL+0.01,
+                label=COUNTRY),size=2.5)
+```
+```{r}
+ggplot(data_joined_CEE_sel_years)+geom_point(aes(VOTER_TURNOUT_PARLIAMENTARY,SI_DEMOCRACY_STATUS_1_BTI))+
+  geom_text(aes(VOTER_TURNOUT_PARLIAMENTARY,SI_DEMOCRACY_STATUS_1_BTI+0.01,
+                label=COUNTRY),size=2.5)+ylab("Democracy")
+```
+
+```{r}
+#cormat <- as.data.frame(round(cor(data_joined_CEE_sel_years[,3:12]),2))
+#head(cormat)
+```
+
+
+Moving chart of 
+
+```{r}
+names(data_joined_CEE_sel)
+```
+
+```{r}
+data.google <- data_joined_CEE_sel %>% select(COUNTRY,YEAR,V2XCS_CCSI_VDEM,NY_GDP_PCAP_KD,
+                                              VOTER_TURNOUT_PRESIDENTIAL,VOTER_TURNOUT_PARLIAMENTARY,
+                                              SI_DEMOCRACY_STATUS_1_BTI)
+data.google <- data.google[complete.cases(data.google),]
+names(data.google) <- c("Country","year","VDEM_civil_society", 
+                        "GDP_per_capita_constant_2010_US$",
+                        "VOTER_TURNOUT_PRESIDENTIAL","VOTER_TURNOUT_PARLIAMENTARY",
+                        "Democracy_status")
+
+```
+
+```{r}
+myStateSettings <-'{"xZoomedDataMin":1199145600000,"colorOption":"2",
+"duration":{"timeUnit":"Y","multiplier":1},"yLambda":1,
+"yAxisOption":"4","sizeOption":"_UNISIZE",
+"iconKeySettings":[],"xLambda":1,"nonSelectedAlpha":0,
+"xZoomedDataMax":1262304000000,"iconType":"LINE",
+"dimensions":{"iconDimensions":["dim0"]},
+"showTrails":false,"uniColorForNonSelected":false,
+"xAxisOption":"_TIME","orderedByX":false,"playDuration":15000,
+"xZoomedIn":false,"time":"2010","yZoomedDataMin":0,
+"yZoomedIn":false,"orderedByY":false,"yZoomedDataMax":100}' 
+```
+
+```{r}
+chart <- gvisMotionChart(data.google, idvar="Country", 
+                        timevar="year", 
+                        colorvar ="Democracy_status", 
+                        xvar = "GDP_per_capita_constant_2010_US$",
+                        yvar = "VDEM_civil_society", 
+                        sizevar="VOTER_TURNOUT_PRESIDENTIAL",
+                                             date.format = "%Y",
+                     options=list(state=myStateSettings))
+```
+
+```{r}
+plot(chart)
+```
+
