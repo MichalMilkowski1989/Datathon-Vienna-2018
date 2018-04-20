@@ -1,0 +1,68 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Data Ambassadors' attempts
+```{r}
+setwd("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata")
+getwd()
+
+```
+
+```{r}
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/civil_society_selected.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/world_bank_selected.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/world_bank_selected_vars_metadata.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/civil_society_selected_vars_metadata.Rdata")
+```
+
+```{r}
+#load("/Users/mm186159/OneDrive - Teradata/Datathon/group3/civil_society_selected.Rdata")
+```
+
+
+```{r}
+rm(i)
+```
+
+Load libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+#install.packages("googleVis")
+library(googleVis)
+```
+
+Join world bank with civil society 
+```{r}
+data_joined <- dplyr::inner_join(world_bank_selected,civil_society_selected,
+                                 by=c("YEAR" = "YEAR","COUNTRY" = "COUNTRY"))
+```
+
+Select bunch of variables
+
+```{r}
+
+```
+
+select some years
+
+```{r}
+
+```
+
+Prepare biplots
+```{r}
+
+```
+
+Prepare some google charts
+```{r}
+
+```
+GDP vs 
+```{r}
+
+```
+
