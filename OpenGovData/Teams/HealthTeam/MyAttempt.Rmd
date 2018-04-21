@@ -105,6 +105,7 @@ vars_dots <- toupper(vars_dots)
 
 vars_underscores <- gsub("\\.","\\_",vars_dots)
 ```
+
 select variables
 ```{r}
 data_joined_CEE_sel <- data_joined_CEE %>% select(setdiff(vars_underscores,c("MEMBERS_ANY_PCT_WVS",
@@ -180,7 +181,18 @@ pca8_scaled <- prcomp(x = pcadata %>%
 
 biplot(pca8_scaled)
 
+
 ```
+```{r}
+pca8_scaled_without_AUSTRIA <- prcomp(x = pcadata %>% filter(COUNTRY != "Austria") %>% 
+                        select(-COUNTRY,-YEAR),
+                               center = TRUE,scale.=TRUE)
+
+
+biplot(pca8_scaled_without_AUSTRIA)
+```
+
+
 Percentage of variance
 ```{r}
 plot(pca8_scaled)
@@ -191,6 +203,17 @@ by variables
 ```{r}
 Cumulative.variance.explained <- cumsum(round(pca8_scaled$sdev^2/sum(pca8_scaled$sdev^2),2))
 Cumulative.variance.explained[2]
+```
+```{r}
+# without Austria
+Cumulative.variance.explained.without.Austria <- cumsum(round(pca8_scaled_without_AUSTRIA$sdev^2/sum(pca8_scaled_without_AUSTRIA$sdev^2),2))
+Cumulative.variance.explained.without.Austria
+```
+```{r}
+Cumulative.variance.explained
+```
+```{r}
+Cumulative.variance.explained.without.Austria
 ```
 
 Let's do something better for first 2 principal components
@@ -234,6 +257,36 @@ ggplot(variables_joined) + geom_point(aes(PC1*factor,PC2*factor),colour="red") +
 
   
 ```
+WITHOUT AUSTRIA
+```{r}
+pred.without.austria <- as.data.frame(predict(pca8_scaled_without_AUSTRIA,newdata = data_nonNA))
+pred.without.austria <- data.frame(Country = as.character(pcadata$COUNTRY),pred.without.austria[,1:2])
+
+pred.without.austria <- pred.without.austria %>% filter(Country != 'Austria')
+
+variables.without.austria <- as.data.frame(pca8_scaled_without_AUSTRIA$rotation)[,1:2]
+variables.without.austria$Var <- row.names(variables.without.austria)
+variables_joined.without.austria <- left_join(variables.without.austria,
+                               Metadata_sel2 %>% 
+                                 select(var_name,DESCRIPTION),by=c("Var"="var_name"))
+
+```
+
+```{r}
+factor <- 10
+ggplot(variables_joined.without.austria) + geom_point(aes(PC1*factor,PC2*factor),colour="red") + geom_text(aes(PC1*factor,PC2*factor,label=substr(DESCRIPTION,1,40)),size=2.5)+
+  geom_point(data=pred.without.austria,aes(PC1,PC2),colour="blue")+ geom_text(data=pred.without.austria,aes(PC1,PC2,label=Country),size=3.5)+
+  labs(title = paste0("2-dimensional mapping of CEE countries without Austria \n and civil society related metrics \n ",
+                      "explaining ",as.character(round(100*Cumulative.variance.explained.without.Austria[2])),"% of variance"),
+        y = "Second most important dimension", x = "First most important dimension") + 
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(c(-5,5))
+
+  
+```
+
+
+Some correlation on the plot
+
 ```{r}
 ggplot(data_joined_CEE_sel_years)+geom_point(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL))+
   geom_text(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL+0.01,
@@ -283,12 +336,134 @@ myStateSettings <-'{"xZoomedDataMin":1199145600000,"colorOption":"2",
 ```
 
 ```{r}
+
 chart <- gvisMotionChart(data.google, idvar="Country", 
                         timevar="year", 
                         colorvar ="Democracy_status", 
                         xvar = "GDP_per_capita_constant_2010_US$",
                         yvar = "VDEM_civil_society", 
                         sizevar="VOTER_TURNOUT_PRESIDENTIAL",
+                                             date.format = "%Y",
+                     options=list(state=myStateSettings))
+```
+
+```{r}
+plot(chart)
+```
+
+# It's time for time-series
+let's get rid of presidential voter turnout and Corruption perception index
+and Austria
+```{r}
+data_joined_CEE_sel_years <- data_joined_CEE_sel %>% filter(YEAR>=2006) %>% 
+  select(-CPI_SCORE_CPI,-VOTER_TURNOUT_PRESIDENTIAL) %>% filter(COUNTRY!="Austria")
+```
+Get rid of missing values
+```{r}
+summary(data_joined_CEE_sel_years)
+```
+
+```{r}
+data_nonNA_years <- data_joined_CEE_sel_years[complete.cases(data_joined_CEE_sel_years),]
+data_nonNA_years$COUNTRY <- as.character(data_nonNA_years$COUNTRY)
+```
+
+```{r}
+pca_scaled_years <- prcomp(x = data_nonNA_years %>% 
+                        select(-COUNTRY,-YEAR),
+                               center = TRUE,scale.=TRUE)
+
+
+```
+
+
+Percentage of variance
+```{r}
+plot(pca_scaled_years)
+```
+
+
+by variables
+```{r}
+Cumulative.variance.explained.years <- cumsum(round(pca_scaled_years$sdev^2/sum(pca_scaled_years$sdev^2),2))
+Cumulative.variance.explained.years[2]
+```
+
+Let's do something better for first 2 principal components
+```{r}
+pred_years <- as.data.frame(predict(pca_scaled_years,newdata = data_nonNA_years))
+pred_years <- data.frame(Country = as.character(data_nonNA_years$COUNTRY),
+                         Year = data_nonNA_years$YEAR,pred_years[,1:2])
+pred_years$Country<-as.character(pred_years$Country)
+```
+
+#first 2 
+```{r}
+```
+
+
+```{r}
+variables_years <- as.data.frame(pca_scaled_years$rotation)[,1:2]
+variables_years$Var <- row.names(variables_years)
+variables_joined_years <- left_join(variables_years,
+                               Metadata_sel2 %>% 
+                                 select(var_name,DESCRIPTION),by=c("Var"="var_name"))
+
+```
+
+
+Plot it finally
+
+```{r}
+factor <- 10
+year <- 2007
+
+data_vars <- variables_joined_years
+data_countries <- pred_years %>% filter(Year == year)
+
+ggplot(data_vars) + geom_point(aes(PC1*factor,PC2*factor),colour="red") + geom_text(aes(PC1*factor,PC2*factor,label=substr(DESCRIPTION,1,40)),size=2)+
+  geom_point(data=data_countries,aes(PC1,PC2),colour="blue")+ geom_text(data=data_countries,aes(PC1,PC2,label=Country),size=2.5)+
+  labs(title = paste0("2-dimensional mapping of CEE countries \n and civil society related metrics \n ",
+                      "explaining ",as.character(round(100*Cumulative.variance.explained[2])),"% of variance"),
+       subtitle = paste0("As of ",as.character(year)),
+        y = "Second most important dimension", x = "First most important dimension") + 
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(c(-5,5))
+
+  
+```
+```{r}
+factor <- 10
+year <- 2017
+
+data_vars <- variables_joined_years
+data_countries <- pred_years %>% filter(Year == year)
+
+ggplot(data_vars) + geom_point(aes(PC1*factor,PC2*factor),colour="red") + geom_text(aes(PC1*factor,PC2*factor,label=substr(DESCRIPTION,1,40)),size=2)+
+  geom_point(data=data_countries,aes(PC1,PC2),colour="blue")+ geom_text(data=data_countries,aes(PC1,PC2,label=Country),size=2.5)+
+  labs(title = paste0("2-dimensional mapping of CEE countries \n and civil society related metrics \n ",
+                      "explaining ",as.character(round(100*Cumulative.variance.explained[2])),"% of variance"),
+       subtitle = paste0("As of ",as.character(year)),
+        y = "Second most important dimension", x = "First most important dimension") + 
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(c(-5,5))
+```
+
+# google motion chart
+```{r}
+data.google <- pred_years2
+
+pred_years2 <- inner_join(pred_years,data_nonNA_years,by=c("Country"="COUNTRY","Year"="YEAR"))
+
+names(pred_years2) <- c("Country","Year","PC1","PC2","CoreCivilSociety","HealthEquality",
+                        "GDP_growth","GDPperCapita","LifeExpectancy",
+                        "DemocracyStatus","MarketEconomyStatus",
+                        "ParliamentaryElectionTurnout"
+)
+chart <- gvisMotionChart(data.google, idvar="Country", 
+                        timevar="Year", 
+                        colorvar ="CoreCivilSociety", 
+                        xvar = "PC1",
+                        yvar = "PC2", 
+                        sizevar="GDP_growth",
                                              date.format = "%Y",
                      options=list(state=myStateSettings))
 ```

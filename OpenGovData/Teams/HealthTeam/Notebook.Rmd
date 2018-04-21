@@ -247,4 +247,96 @@ ggplot(data_all_countries[!is.na(data_all_countries$V2CSCNSULT_VDEM),],
 
 
 
+# Imputation of missing values by k-nearest neighbours in dataset with only CEE countries and numeric variables
+
+```{r}
+# list of CEE countries
+countries <- c("Albania","Bosnia and Herzegovina","Bulgaria","Czech Republic","Croatia","Hungary",
+               "Kosovo","Macedonia","Montenegro","Montenegro","Moldova","Poland","Romania","Slovakia",
+               "Slovenia","Serbia","Austria")
+
+# dataset with all variables and from YEAR 2006
+c <- sqldf("select *
+              from world a left join
+                   civil b on a.COUNTRY = b.COUNTRY
+                            and a.YEAR = b.YEAR
+            and a.YEAR >= 2006")
+
+library(dplyr)
+library(DMwR)
+
+# numerical variables
+num <- sapply(c, function(x) is.numeric(x))
+# we want to have COUNTRY in the dataset
+num[1] <- TRUE
+
+# dataset with CEE countries and only numerical variables (+COUNTRY)
+only_num <- c[c$COUNTRY %in% countries,num]
+
+# removing variables with more than 50% missing values
+mis <- sapply(only_num, function(x) sum(length(which(is.na(x))))/nrow(only_num))
+not_mis <- names(mis[mis <= 0.5])
+# manually inserting Health equality
+not_mis[110] <- "V2PEHEALTH_VDEM"
+for_impute <- only_num[,c(not_mis)]
+
+# k-nearest neighbours 
+imputed <- knnImputation(for_impute[,c(3:ncol(for_impute))])  # perform knn imputation.
+# getting COUNTRY and YEAR back
+imputed <- cbind(for_impute[,c(1,2)], imputed)
+
+# control if all the missing values were replaced
+anyNA(imputed)
+
+```
+
+
+# And finally some modelling :-)
+## First is a model with Life expectancy as target variable
+
+```{r}
+model <- lm(SP_DYN_LE00_IN__POPULATIONESTIMATESANDPROJECTIONS ~ IT_CEL_SETS_P2__JOBS +
+              X1_1_ACCESS_ELECTRICITY_TOT + PV_EST + SI_POV_UMIC + EG_FEC_RNEW_ZS +
+              ER_PTD_TOTL_ZS + YEAR
+              ,data = imputed)
+
+summary(model)
+
+
+# meaning of predictors
+
+# IT_CEL_SETS_P2__JOBS - Mobile cellular subscriptions (per 100 people)
+# X1_1_ACCESS_ELECTRICITY_TOT - Access to electricity (% of total population)
+# PV_EST - Political Stability and Absence of Violence/Terrorism: Estimate
+# SI_POV_UMIC - Poverty headcount ratio at $5.50 a day (2011 PPP) (% of population)
+# EG_FEC_RNEW_ZS - Renewable energy consumption (% of total final energy consumption)
+# ER_PTD_TOTL_ZS - Terrestrial and marine protected areas (% of total territorial area)
+# YEAR
+```
+
+
+
+## Second is a model with Health equality as target variable
+### the highr the Health equality index (0-4), the more equal healtcare, i.e. almost every citizen can afford it
+
+```{r}
+model_2 <- lm(V2PEHEALTH_VDEM ~ YEAR + IC_REG_PROC + NW_NFA_PC + BM_KLT_DINV_WD_GD_ZS + NW_HCA_PC +
+                                NE_EXP_GNFS_ZS + SI_POV_UMIC + VA_EST + NY_ADJ_AEDU_GN_ZS + NW_NCA_SAOI_PC
+                  ,data = imputed)
+
+summary(model_2)
+
+# NY_ADJ_AEDU_GN_ZS - Adjusted savings: education expenditure (% of GNI)
+# IC_REG_PROC - Start-up procedures to register a business (number)
+# BM_KLT_DINV_WD_GD_ZS - Foreign direct investment, net outflows (% of GDP)
+# NE_EXP_GNFS_ZS - Exports of goods and services (% of GDP)
+# SI_POV_UMIC - Poverty headcount ratio at $5.50 a day (2011 PPP) (% of population)
+# NW_HCA_PC - Human capital per capita (constant 2014 US$)
+# NW_NCA_SAOI_PC - Natural capital per capita, subsoil assets: oil (constant 2014 US$)
+# NW_NFA_PC - Net foreign assets per capita (constant 2014 US$)
+# VA_EST - Voice and Accountability: Estimate
+```
+
+
+
 
