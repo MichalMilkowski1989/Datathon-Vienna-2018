@@ -7,8 +7,8 @@ library(stargazer)
 ############## Data Preparation ################
 ################################################
 
-load("civil_society_selected.Rdata")
-load("world_bank_selected.Rdata")
+load("OpenGovData/Teams/InequalityTeam/civil_society_selected.Rdata")
+load("OpenGovData/Teams/InequalityTeam/world_bank_selected.Rdata")
 
 ### Choose VDEMS from Civil Society dataset
 civil_society_vdm <- civil_society_selected[,c(1:2,grep("VDEM", colnames(civil_society_selected)))]
@@ -23,7 +23,7 @@ ceedata <- subset(alldata, alldata$SUB_REGION=="Eastern Europe"|alldata$COUNTRY=
 ceedata_exclUkr<-subset(ceedata, ceedata$COUNTRY!="Ukraine")
 
 ### exclude Ukraine, Russian Federation and Moldova (for the same reasons)
-ceedata_exclUkrRusMold<-subset(ceedata_exclUkr, ceedata_exclUkr$COUNTRY!="Ukraine"&ceedata_exclUkr$COUNTRY!="Russian Federation"&ceedata_exclUkr$COUNTRY!="Moldova")
+ceedata_exclUkrRusMold<-subset(ceedata, ceedata$COUNTRY!="Ukraine"&ceedata$COUNTRY!="Russian Federation"&ceedata$COUNTRY!="Moldova")
 
 ################################################
 ############## Model estimation ################
@@ -31,7 +31,7 @@ ceedata_exclUkrRusMold<-subset(ceedata_exclUkr, ceedata_exclUkr$COUNTRY!="Ukrain
 
 ### Dynamic panel fixed effects model
 myplm <- plm(V2X_CSPART_VDEM~lag(V2X_CSPART_VDEM)+NY_GDP_PCAP_CD+NY_GDP_MKTP_KD_ZG
-+PV_EST+CC_EST+SI_POV_GINI+GE_EST+SE_XPD_TOTL_GD_ZS+EG_ELC_RNEW_ZS+SM_POP_NETM, data=ceedata_exclUkrRus, effect="individual", model="within")
++PV_EST+CC_EST+SI_POV_GINI+GE_EST+SE_XPD_TOTL_GD_ZS+EG_ELC_RNEW_ZS+SM_POP_NETM, data=ceedata_exclUkrRusMold, effect="individual", model="within")
 summary(myplm)
 
 stargazer(myplm)
