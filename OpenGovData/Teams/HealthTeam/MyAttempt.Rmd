@@ -1,0 +1,299 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Data Ambassadors' attempts
+```{r}
+setwd("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata")
+getwd()
+
+```
+
+```{r}
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/civil_society_selected.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/world_bank_selected.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/world_bank_selected_vars_metadata.Rdata")
+load("~/OneDrive - Teradata/Datathon/Group 3 intro/Data for USB/Rdata/civil_society_selected_vars_metadata.Rdata")
+```
+
+```{r}
+#load("/Users/mm186159/OneDrive - Teradata/Datathon/group3/civil_society_selected.Rdata")
+```
+
+Load libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+#install.packages("googleVis")
+library(googleVis)
+```
+
+Join world bank with civil society 
+```{r}
+data_joined <- dplyr::inner_join(world_bank_selected,civil_society_selected,
+                                 by=c("YEAR" = "YEAR","COUNTRY" = "COUNTRY"))
+```
+
+Select countries
+
+```{r}
+CEE_countries <- c('Albania',
+                   'Bosnia and Herzegovina',
+                   'Bulgaria',
+                   'Czech Republic',
+                   'Croatia',
+                   'Hungary',
+                   'Kosovo',
+                   'Macedonia',
+                   'Montenegro',
+                   #'Serbia and Montenegro',
+                   'Montenegro',
+                   'Moldova',
+                   'Poland',
+                   'Romania',
+                   'Slovakia',
+                   'Czechoslovakia',
+                   'Slovenia',
+                   'Serbia',
+                   'Austria'
+)
+data_joined_CEE <- data_joined %>% filter(COUNTRY %in% CEE_countries)
+```
+
+Select bunch of variables
+
+```{r}
+# vars_dots <- c("COUNTRY","YEAR",
+#                "FP.CPI.TOTL.ZG","NY.GDP.MKTP.KD.ZG","SP.POP.TOTL","SH.DYN.NCOM.ZS","NY.GDP.PCAP.KD",
+#                       "SH.DYN.0514__POPULATIONESTIMATESANDPROJECTIONS",
+#             "SH.DYN.MORT__POPULATIONESTIMATESANDPROJECTIONS",
+#             "SP.DYN.LE00.IN__POPULATIONESTIMATESANDPROJECTIONS","SI.DST.FRST.20",
+#                       "EN.ATM.PM25.MC.ZS__SUSTAINABLEDEVELOPMENTGOALS",
+#             "SHARE.OF.EMPLOYED.IN.TOTAL.POPULATION",
+#             "SH.UHC.CONS.ZS","NW.HCA.PC",
+#             "MEMBERS_ANY_PCT_WVS","CPI_SCORE_CPI",
+#             "VOTER_TURNOUT_PRESIDENTIAL",
+#             "VOTER_TURNOUT_PARLIAMENTARY",
+#             "Q13.2_CIVIL_SOCIETY_TRADITIONS_BTI",
+#             "SI_DEMOCRACY_STATUS_1_BTI",
+#             "SII_MARKET_ECONOMY_STATUS_1_BTI",
+#             "POPULATION_RED_CROSS",
+#             "V2X_CSPART_VDEM",
+#             "V2XCS_CCSI_VDEM",
+#             "V2DLENGAGE_VDEM",
+#             "V2CSREPRSS_VDEM",
+#             "V2CSCNSULT_VDEM",
+#             "V2CSPRTCPT_VDEM",
+#             "V2CSANTIMV_VDEM",
+#             "V2MEBIAS_VDEM",
+#             "V2PEHEALTH_VDEM")
+
+vars_dots <- c("COUNTRY","YEAR",
+               "v2xcs_ccsi_VDEM",
+               "v2pehealth_VDEM",
+               "NY.GDP.MKTP.KD.ZG",
+               "NY.GDP.PCAP.KD",
+               "SP.DYN.LE00.IN__Populationestimatesandprojections",#Life expectancy at birth, total (years)",
+               "si_democracy_status_1_BTI",#"Democracy status Index (1-10)",
+               "sii_market_economy_status_1_BTI",#Market economy status Index (1-10)",
+               "voter_turnout_presidential",
+               "voter_turnout_parliamentary",
+               "CPI_score_CPI"
+               )
+vars_dots <- toupper(vars_dots)
+
+vars_underscores <- gsub("\\.","\\_",vars_dots)
+```
+select variables
+```{r}
+data_joined_CEE_sel <- data_joined_CEE %>% select(setdiff(vars_underscores,c("MEMBERS_ANY_PCT_WVS",
+                                                                             "POPULATION_RED_CROSS")
+                                                          )
+                                                  )
+```
+
+join metadata
+
+```{r}
+world_bank_selected_vars_metadata2 <- world_bank_selected_vars_metadata 
+names(world_bank_selected_vars_metadata2) <- names(civil_society_selected_vars_metadata)
+
+METADATA <- rbind(civil_society_selected_vars_metadata,world_bank_selected_vars_metadata2)
+# variables selected
+Metadata_sel <- METADATA %>% filter(toupper(VARIABLE) %in% vars_dots)
+```
+select variables
+
+select some years
+e.g. 2017
+
+```{r}
+data_joined_CEE_sel_years <- data_joined_CEE_sel %>% filter(YEAR %in% c(2017))
+```
+
+Impute missing values with mean
+```{r}
+library(data.table)
+ads_full <- data.table(data_joined_CEE_sel_years)
+impute_mean_na <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+classes <- ads_full[,lapply(.SD,class),.SDcols = colnames(ads_full)] 
+classes <- classes[1,] %>% as.vector
+ads_full <- ads_full[,lapply(.SD,impute_mean_na),.SDcols = colnames(classes)[which(classes == 'numeric')]]
+
+data_nonNA <- cbind(COUNTRY = data_joined_CEE_sel_years$COUNTRY, 
+                    data.frame(ads_full)
+)
+```
+
+let's get rid of missing values
+```{r}
+#data_nonNA <- data_joined_CEE_sel_years %>% filter(complete.cases(data_joined_CEE_sel_years))
+```
+
+check it
+```{r}
+dim(data_joined_CEE_sel_years)
+```
+
+```{r}
+dim(data_nonNA)
+```
+
+
+Prepare biplots
+get rid of varibales with zero variance
+```{r}
+vars<-sapply(data_nonNA %>% select(-COUNTRY,-YEAR),var)
+vars0 <- vars[vars==0]
+
+pcadata <- data_nonNA[,!names(data_nonNA)%in% names(vars0)]
+```
+
+PCA Analysis
+
+```{r}
+pca8_scaled <- prcomp(x = pcadata %>% 
+                        select(-COUNTRY,-YEAR),
+                               center = TRUE,scale.=TRUE)
+
+
+biplot(pca8_scaled)
+
+```
+Percentage of variance
+```{r}
+plot(pca8_scaled)
+```
+
+
+by variables
+```{r}
+Cumulative.variance.explained <- cumsum(round(pca8_scaled$sdev^2/sum(pca8_scaled$sdev^2),2))
+Cumulative.variance.explained[2]
+```
+
+Let's do something better for first 2 principal components
+```{r}
+pred <- as.data.frame(predict(pca8_scaled,newdata = data_nonNA))
+pred <- data.frame(Country = as.character(pcadata$COUNTRY),pred[,1:2])
+
+```
+
+#first 2 
+```{r}
+pred
+```
+
+Join variables
+```{r}
+Metadata_sel2 <- Metadata_sel
+Metadata_sel2$var_name <- toupper(gsub("\\.","\\_",Metadata_sel2$VARIABLE))
+```
+
+```{r}
+variables <- as.data.frame(pca8_scaled$rotation)[,1:2]
+variables$Var <- row.names(variables)
+variables_joined <- left_join(variables,
+                               Metadata_sel2 %>% 
+                                 select(var_name,DESCRIPTION),by=c("Var"="var_name"))
+
+```
+
+
+Plot it finally
+
+```{r}
+factor <- 10
+ggplot(variables_joined) + geom_point(aes(PC1*factor,PC2*factor),colour="red") + geom_text(aes(PC1*factor,PC2*factor,label=substr(DESCRIPTION,1,40)),size=2.5)+
+  geom_point(data=pred,aes(PC1,PC2),colour="blue")+ geom_text(data=pred,aes(PC1,PC2,label=Country),size=3.5)+
+  labs(title = paste0("2-dimensional mapping of CEE countries \n and civil society related metrics \n ",
+                      "explaining ",as.character(round(100*Cumulative.variance.explained[2])),"% of variance"),
+        y = "Second most important dimension", x = "First most important dimension") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+  
+```
+```{r}
+ggplot(data_joined_CEE_sel_years)+geom_point(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL))+
+  geom_text(aes(VOTER_TURNOUT_PARLIAMENTARY,VOTER_TURNOUT_PRESIDENTIAL+0.01,
+                label=COUNTRY),size=2.5)
+```
+```{r}
+ggplot(data_joined_CEE_sel_years)+geom_point(aes(VOTER_TURNOUT_PARLIAMENTARY,SI_DEMOCRACY_STATUS_1_BTI))+
+  geom_text(aes(VOTER_TURNOUT_PARLIAMENTARY,SI_DEMOCRACY_STATUS_1_BTI+0.01,
+                label=COUNTRY),size=2.5)+ylab("Democracy")
+```
+
+```{r}
+#cormat <- as.data.frame(round(cor(data_joined_CEE_sel_years[,3:12]),2))
+#head(cormat)
+```
+
+
+Moving chart of 
+
+```{r}
+names(data_joined_CEE_sel)
+```
+
+```{r}
+data.google <- data_joined_CEE_sel %>% select(COUNTRY,YEAR,V2XCS_CCSI_VDEM,NY_GDP_PCAP_KD,
+                                              VOTER_TURNOUT_PRESIDENTIAL,VOTER_TURNOUT_PARLIAMENTARY,
+                                              SI_DEMOCRACY_STATUS_1_BTI)
+data.google <- data.google[complete.cases(data.google),]
+names(data.google) <- c("Country","year","VDEM_civil_society", 
+                        "GDP_per_capita_constant_2010_US$",
+                        "VOTER_TURNOUT_PRESIDENTIAL","VOTER_TURNOUT_PARLIAMENTARY",
+                        "Democracy_status")
+
+```
+
+```{r}
+myStateSettings <-'{"xZoomedDataMin":1199145600000,"colorOption":"2",
+"duration":{"timeUnit":"Y","multiplier":1},"yLambda":1,
+"yAxisOption":"4","sizeOption":"_UNISIZE",
+"iconKeySettings":[],"xLambda":1,"nonSelectedAlpha":0,
+"xZoomedDataMax":1262304000000,"iconType":"LINE",
+"dimensions":{"iconDimensions":["dim0"]},
+"showTrails":false,"uniColorForNonSelected":false,
+"xAxisOption":"_TIME","orderedByX":false,"playDuration":15000,
+"xZoomedIn":false,"time":"2010","yZoomedDataMin":0,
+"yZoomedIn":false,"orderedByY":false,"yZoomedDataMax":100}' 
+```
+
+```{r}
+chart <- gvisMotionChart(data.google, idvar="Country", 
+                        timevar="year", 
+                        colorvar ="Democracy_status", 
+                        xvar = "GDP_per_capita_constant_2010_US$",
+                        yvar = "VDEM_civil_society", 
+                        sizevar="VOTER_TURNOUT_PRESIDENTIAL",
+                                             date.format = "%Y",
+                     options=list(state=myStateSettings))
+```
+
+```{r}
+plot(chart)
+```
+
