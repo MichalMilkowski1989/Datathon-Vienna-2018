@@ -1,0 +1,218 @@
+---
+  title: "R Notebook"
+output: html_notebook
+---
+  
+  Civil society indicators (2-dimensional mapping)
+```{r}
+setwd("C:/Data/OpenGovData/Rdata/")
+
+getwd()
+
+```
+
+```{r}
+load("C:/Data/OpenGovData/Rdata/civil_society_selected.Rdata")
+load("C:/Data/OpenGovData/Rdata/world_bank_selected.Rdata")
+load("C:/Data/OpenGovData/Rdata/world_bank_selected_vars_metadata.Rdata")
+load("C:/Data/OpenGovData/Rdata/civil_society_selected_vars_metadata.Rdata")
+```
+
+Load libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+install.packages("googleVis")
+library(googleVis)
+```
+
+Join world bank with civil society 
+```{r}
+data_joined <- dplyr::inner_join(world_bank_selected,civil_society_selected,
+by=c("YEAR" = "YEAR","COUNTRY" = "COUNTRY"))
+```
+
+Select countries
+
+```{r}
+CEE_countries <- c(
+'Bulgaria',
+'Czech Republic',
+'Hungary',
+'Moldova',
+'Poland',
+'Romania',
+'Slovakia',
+'Austria',
+'Ukraine'
+)
+data_joined_CEE <- data_joined %>% filter(COUNTRY %in% CEE_countries)
+```
+
+Select bunch of variables
+
+```{r}
+# vars_dots <- c("COUNTRY","YEAR",
+#                "FP.CPI.TOTL.ZG","NY.GDP.MKTP.KD.ZG","SP.POP.TOTL","SH.DYN.NCOM.ZS","NY.GDP.PCAP.KD",
+#                       "SH.DYN.0514__POPULATIONESTIMATESANDPROJECTIONS",
+#             "SH.DYN.MORT__POPULATIONESTIMATESANDPROJECTIONS",
+#             "SP.DYN.LE00.IN__POPULATIONESTIMATESANDPROJECTIONS","SI.DST.FRST.20",
+#                       "EN.ATM.PM25.MC.ZS__SUSTAINABLEDEVELOPMENTGOALS",
+#             "SHARE.OF.EMPLOYED.IN.TOTAL.POPULATION",
+#             "SH.UHC.CONS.ZS","NW.HCA.PC",
+#             "MEMBERS_ANY_PCT_WVS","CPI_SCORE_CPI",
+#             "VOTER_TURNOUT_PRESIDENTIAL",
+#             "VOTER_TURNOUT_PARLIAMENTARY",
+#             "Q13.2_CIVIL_SOCIETY_TRADITIONS_BTI",
+#             "SI_DEMOCRACY_STATUS_1_BTI",
+#             "SII_MARKET_ECONOMY_STATUS_1_BTI",
+#             "POPULATION_RED_CROSS",
+#             "V2X_CSPART_VDEM",
+#             "V2XCS_CCSI_VDEM",
+#             "V2DLENGAGE_VDEM",
+#             "V2CSREPRSS_VDEM",
+#             "V2CSCNSULT_VDEM",
+#             "V2CSPRTCPT_VDEM",
+#             "V2CSANTIMV_VDEM",
+#             "V2MEBIAS_VDEM",
+#             "V2PEHEALTH_VDEM")
+
+vars_dots <- c("COUNTRY","YEAR",
+"V2X_CSPART_VDEM","NY_GDP_PCAP_CD","NY_GDP_MKTP_KD_ZG","PV_EST","CC_EST","SI_POV_GINI","GE_EST","SE_XPD_TOTL_GD_ZS","EG_ELC_RNEW_ZS","SM_POP_NETM")
+     
+vars_dots <- toupper(vars_dots)
+
+vars_underscores <- gsub("\\.","\\_",vars_dots)
+```
+select variables
+```{r}
+data_joined_CEE_sel <- data_joined_CEE[,vars_underscores]
+
+#(setdiff(vars_underscores,c("MEMBERS_ANY_PCT_WVS",
+#"POPULATION_RED_CROSS")
+#)
+#)
+```
+
+join metadata
+
+```{r}
+world_bank_selected_vars_metadata2 <- world_bank_selected_vars_metadata 
+names(world_bank_selected_vars_metadata2) <- names(civil_society_selected_vars_metadata)
+
+METADATA <- rbind(civil_society_selected_vars_metadata,world_bank_selected_vars_metadata2)
+# variables selected
+Metadata_sel <- METADATA %>% mutate(var2= toupper(gsub("\\.","\\_", VARIABLE)))%>% filter(toupper(var2) %in% vars_dots)
+```
+select variables
+
+select some years
+e.g. 2017
+
+```{r}
+data_joined_CEE_sel_years <- data_joined_CEE_sel %>% filter(YEAR %in% c(2017))
+```
+
+Impute missing values with mean
+```{r}
+library(data.table)
+ads_full <- data.table(data_joined_CEE_sel_years)
+impute_mean_na <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+classes <- ads_full[,lapply(.SD,class),.SDcols = colnames(ads_full)] 
+classes <- classes[1,] %>% as.vector
+ads_full <- ads_full[,lapply(.SD,impute_mean_na),.SDcols = colnames(classes)[which(classes == 'numeric')]]
+
+data_nonNA <- cbind(COUNTRY = data_joined_CEE_sel_years$COUNTRY, 
+data.frame(ads_full)
+)
+```
+
+let's get rid of missing values
+```{r}
+#data_nonNA <- data_joined_CEE_sel_years %>% filter(complete.cases(data_joined_CEE_sel_years))
+```
+
+check it
+```{r}
+dim(data_joined_CEE_sel_years)
+```
+
+```{r}
+dim(data_nonNA)
+```
+
+
+Prepare biplots
+get rid of varibales with zero variance
+```{r}
+vars<-sapply(data_nonNA %>% select(-COUNTRY,-YEAR),var)
+vars0 <- vars[vars==0]
+
+pcadata <- data_nonNA[,!names(data_nonNA)%in% names(vars0)]
+```
+
+PCA Analysis
+
+```{r}
+pca8_scaled <- prcomp(x = pcadata %>% 
+                        select(-COUNTRY,-YEAR),
+                      center = TRUE,scale.=TRUE)
+
+
+biplot(pca8_scaled)
+
+```
+Percentage of variance
+```{r}
+plot(pca8_scaled)
+```
+
+
+by variables
+```{r}
+Cumulative.variance.explained <- cumsum(round(pca8_scaled$sdev^2/sum(pca8_scaled$sdev^2),2))
+Cumulative.variance.explained[2]
+```
+
+Let's do something better for first 2 principal components
+```{r}
+pred <- as.data.frame(predict(pca8_scaled,newdata = data_nonNA))
+pred <- data.frame(Country = as.character(pcadata$COUNTRY),pred[,1:2])
+
+```
+
+#first 2 
+```{r}
+pred
+```
+
+Join variables
+```{r}
+Metadata_sel2 <- Metadata_sel
+Metadata_sel2$var_name <- toupper(gsub("\\.","\\_",Metadata_sel2$VARIABLE))
+```
+
+```{r}
+variables <- as.data.frame(pca8_scaled$rotation)[,1:2]
+variables$Var <- row.names(variables)
+variables_joined <- left_join(variables,
+Metadata_sel2 %>% 
+select(var_name,DESCRIPTION),by=c("Var"="var_name"))
+
+```
+
+
+Plot it finally
+
+```{r}
+factor <- 100
+ggplot(variables_joined) + geom_point(aes(PC1*factor,PC2*factor),colour="red") + geom_text(aes(PC1*factor,PC2*factor,label=substr(DESCRIPTION,1,40)),size=2.5)+
+geom_point(data=pred,aes(PC1,PC2),colour="blue")+ geom_text(data=pred,aes(PC1,PC2,label=Country),size=3.5)+
+labs(title = paste0("2-dimensional mapping of CEE countries \n and civil society related metrics \n ",
+"explaining ",as.character(round(100*Cumulative.variance.explained[2])),"% of variance"),
+y = "Second most important dimension", x = "First most important dimension") + 
+theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+
