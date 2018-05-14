@@ -4,6 +4,9 @@ This part of the Datathon repository contains the code relevant to the Social
 Media challenge. It has the following contents:
 
 1. Harvesting code in `harvest`
+2. Topic modelling code in `topics`
+3. Sentiment classification and emotion extraction code in `sentiments`
+4. Social network analysis code in `sna`
 
 ## Harvesting
 
@@ -11,7 +14,6 @@ The provided harvesting code can be used to harvest the following social media
 sites:
 
 * YouTube
-* Facebook
 * Twitter
 
 
@@ -20,7 +22,7 @@ sites:
 
 Note that access to all APIs used in the harvesting code requires authentication
 tokens. You can generate your own tokens to use for harvesting, should you wish
-to harvest on your own. In order to generate a token you need to have the 
+to harvest on your own. In order to generate a token you need to have the
 following:
 
 * a developer account with the respective social media site
@@ -33,4 +35,6 @@ For details on how to do authentication for the APIs used, see the scripts
 provided.
 
 
+## Analytical code
 
+All code has been documented in the respective directories/files.
